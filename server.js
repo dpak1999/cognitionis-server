@@ -2,6 +2,7 @@
 
 import express from "express";
 import cors from "cors";
+import { readdirSync } from "fs";
 const colors = require("colors");
 const morgan = require("morgan");
 require("dotenv").config();
@@ -15,9 +16,7 @@ app.use(express.json());
 app.use(morgan("dev"));
 
 // routes
-app.get("/", (req, res) => {
-  res.send("home endpoint");
-});
+readdirSync("./routes").map((r) => app.use("/api", require(`./routes/${r}`)));
 
 // server setup
 const port = process.env.PORT;
