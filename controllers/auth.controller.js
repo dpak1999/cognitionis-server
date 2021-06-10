@@ -1,5 +1,6 @@
 /** @format */
 
 export const register = (req, res) => {
-  res.send("Register route from cont");
+  console.log(req.body);
+  res.json("Register route from cont");
 };
