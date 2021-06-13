@@ -3,33 +3,28 @@ import colors from "colors";
 import User from "../models/User";
 import { comparePassword, hashPassword } from "../utils/auth.util";
 import jwt from "jsonwebtoken";
+import { errorHandler, genericError } from "../utils/error.utils";
 
 export const register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     // validations
     if (!name) {
-      return res.status(400).send("Name is required");
+      genericError(400, "Name is required");
     }
 
     if (!password || password.length < 7) {
-      return res
-        .status(400)
-        .send("Password should be Minimum 8 characters long");
+      genericError(400, "Password should be Minimum 8 characters long");
     }
 
     if (!email) {
-      return res.status(400).send("Email is required");
+      genericError(400, "Email is required");
     }
 
     let existingUser = await User.findOne({ email }).exec();
 
     if (existingUser) {
-      return res.status(400).send("An user with this email already exists");
-    }
-
-    if (!name) {
-      return res.status(400).send("Name is required");
+      genericError(400, "An user with this email already exists");
     }
 
     // hash pwd
@@ -44,9 +39,8 @@ export const register = async (req, res) => {
     await user.save();
 
     return res.json({ ok: true });
-  } catch (error) {
-    console.log(`${error.message}`.red.underline);
-    return res.status(400).send("Try again");
+  } catch (err) {
+    errorHandler(err, "Unable to register");
   }
 };
 
@@ -57,14 +51,14 @@ export const login = async (req, res) => {
     // get the user with email
     const user = await User.findOne({ email }).exec();
     if (!user) {
-      return res.status(400).send("User with that email doesnt exist");
+      genericError(400, "User with that email doesnt exist");
     }
 
     // check pwd
     const matchPwd = await comparePassword(password, user.password);
 
     if (!matchPwd) {
-      return res.status(400).send("Incorrect password");
+      genericError(400, "Incorrect password");
     }
 
     // create signed jwt
@@ -77,7 +71,15 @@ export const login = async (req, res) => {
     res.cookie("token", token, { httpOnly: true });
     res.json(user);
   } catch (error) {
-    console.log(`${error.message}`.red.underline);
-    return res.status(400).send("Try again");
+    errorHandler(err, "Unable to login");
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    res.clearCookie("token");
+    return res.json({ message: "Logged Out" });
+  } catch (err) {
+    errorHandler(err, "Unable to logout");
   }
 };
