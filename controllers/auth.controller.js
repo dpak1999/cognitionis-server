@@ -88,7 +88,7 @@ export const currentUser = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password").exec();
     console.log("Current User", user);
-    return res.json(user);
+    return res.json({ ok: true });
   } catch (err) {
     errorHandler(err, "Unable to fetch current user details");
   }
