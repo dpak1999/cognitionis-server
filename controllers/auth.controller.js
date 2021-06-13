@@ -70,7 +70,7 @@ export const login = async (req, res) => {
     user.password = undefined;
     res.cookie("token", token, { httpOnly: true });
     res.json(user);
-  } catch (error) {
+  } catch (err) {
     errorHandler(err, "Unable to login");
   }
 };
@@ -81,5 +81,15 @@ export const logout = async (req, res) => {
     return res.json({ message: "Logged Out" });
   } catch (err) {
     errorHandler(err, "Unable to logout");
+  }
+};
+
+export const currentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password").exec();
+    console.log("Current User", user);
+    return res.json(user);
+  } catch (err) {
+    errorHandler(err, "Unable to fetch current user details");
   }
 };
