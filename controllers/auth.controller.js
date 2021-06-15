@@ -1,9 +1,19 @@
 /** @format */
 import colors from "colors";
 import User from "../models/User";
-import { comparePassword, hashPassword } from "../utils/auth.util";
 import jwt from "jsonwebtoken";
+import AWS from "aws-sdk";
+import { comparePassword, hashPassword } from "../utils/auth.util";
 import { errorHandler, genericError } from "../utils/error.utils";
+
+const awsConfig = {
+  accessKeyId: process.env.AWS_ACCESS_KEY,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+  apiVersion: process.env.AWS_API_VERSION,
+};
+
+const SES = new AWS.SES(awsConfig);
 
 export const register = async (req, res) => {
   try {
@@ -92,4 +102,39 @@ export const currentUser = async (req, res) => {
   } catch (err) {
     errorHandler(err, "Unable to fetch current user details");
   }
+};
+
+export const sendTestEmail = async (req, res) => {
+  // console.log("SES email sent");
+  // res.json({ ok: true });
+  const params = {
+    Source: process.env.EMAIL_FROM,
+    Destination: { ToAddresses: ["dashdeepak30@gmail.com"] },
+    ReplyToAddresses: [process.env.EMAIL_FROM],
+    Message: {
+      Body: {
+        Html: {
+          Charset: "UTF-8",
+          Data: `
+          <html>
+            <h1>Reset password link</h1>
+            <p>Please use the following link to reset your password</p>
+          </html>
+          `,
+        },
+      },
+      Subject: {
+        Charset: "UTF-8",
+        Data: "Dlearn Password reset link",
+      },
+    },
+  };
+
+  const emailSent = SES.sendEmail(params).promise();
+  emailSent
+    .then((data) => {
+      console.log(data);
+      res.json({ ok: true });
+    })
+    .catch((err) => console.log(`${err}`.red.underline));
 };
