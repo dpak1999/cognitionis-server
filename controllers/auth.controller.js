@@ -1,11 +1,9 @@
 /** @format */
-import colors from "colors";
 import User from "../models/User";
 import jwt from "jsonwebtoken";
 import AWS from "aws-sdk";
 import { nanoid } from "nanoid";
 import { comparePassword, hashPassword } from "../utils/auth.util";
-import { errorHandler, genericError } from "../utils/error.utils";
 
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -21,21 +19,23 @@ export const register = async (req, res) => {
     const { name, email, password } = req.body;
     // validations
     if (!name) {
-      genericError(400, "Name is required");
+      return res.status(400).send("Name is required");
     }
 
     if (!password || password.length < 7) {
-      genericError(400, "Password should be Minimum 8 characters long");
+      return res
+        .status(400)
+        .send("Password should be Minimum 8 characters long");
     }
 
     if (!email) {
-      genericError(400, "Email is required");
+      return res.status(400).send("Email is required");
     }
 
     let existingUser = await User.findOne({ email }).exec();
 
     if (existingUser) {
-      genericError(400, "An user with this email already exists");
+      return res.status(400).send("An user with this email already exists");
     }
 
     // hash pwd
@@ -51,7 +51,7 @@ export const register = async (req, res) => {
 
     return res.json({ ok: true });
   } catch (err) {
-    errorHandler(err, "Unable to register");
+    return res.status(400).send("Unable to register");
   }
 };
 
@@ -62,14 +62,14 @@ export const login = async (req, res) => {
     // get the user with email
     const user = await User.findOne({ email }).exec();
     if (!user) {
-      genericError(400, "User with that email doesnt exist");
+      return res.status(400).send("User with that email doesnt exist");
     }
 
     // check pwd
     const matchPwd = await comparePassword(password, user.password);
 
     if (!matchPwd) {
-      genericError(400, "Incorrect password");
+      return res.status(400).send("Incorrect password");
     }
 
     // create signed jwt
@@ -82,7 +82,7 @@ export const login = async (req, res) => {
     res.cookie("token", token, { httpOnly: true });
     res.json(user);
   } catch (err) {
-    errorHandler(err, "Unable to login");
+    return res.status(400).send("Unable to login");
   }
 };
 
@@ -91,17 +91,16 @@ export const logout = async (req, res) => {
     res.clearCookie("token");
     return res.json({ message: "Logged Out" });
   } catch (err) {
-    errorHandler(err, "Unable to logout");
+    return res.status(400).send("Unable to logout");
   }
 };
 
 export const currentUser = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select("-password").exec();
-    console.log("Current User", user);
     return res.json({ ok: true });
   } catch (err) {
-    errorHandler(err, "Unable to fetch current user details");
+    return res.status(400).send("Unable to fetch current user details");
   }
 };
 
@@ -115,7 +114,6 @@ export const forgotPassword = async (req, res) => {
     );
 
     if (!user) {
-      // genericError(400, "User with that email doesn't exist");
       return res.status(400).send("User with that email doesnt exist");
     }
 
@@ -123,7 +121,6 @@ export const forgotPassword = async (req, res) => {
     const params = {
       Source: process.env.EMAIL_FROM,
       Destination: { ToAddresses: ["dashdeepak30@gmail.com"] },
-      // ReplyToAddresses: [process.env.EMAIL_FROM],
       Message: {
         Body: {
           Html: {
@@ -152,6 +149,28 @@ export const forgotPassword = async (req, res) => {
       })
       .catch((err) => console.log(`${err}`.red.underline));
   } catch (err) {
-    errorHandler(err, "Unable to fetch current user details");
+    return res.status(400).send("Unable to send mail");
+  }
+};
+
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    const hashedPassword = await hashPassword(newPassword);
+    const user = await User.findOne({ passwordResetCode: code });
+
+    if (!user) {
+      return res.status(400).send("Invalid code");
+    }
+
+    await User.updateOne(
+      { email },
+      { password: hashedPassword, passwordResetCode: "" }
+    ).exec();
+
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(400).send("Unable to reset password");
   }
 };
