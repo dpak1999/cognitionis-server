@@ -115,7 +115,8 @@ export const forgotPassword = async (req, res) => {
     );
 
     if (!user) {
-      genericError(400, "User with that email doesn't exist");
+      // genericError(400, "User with that email doesn't exist");
+      return res.status(400).send("User with that email doesnt exist");
     }
 
     // send email
