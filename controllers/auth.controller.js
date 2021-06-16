@@ -3,6 +3,7 @@ import colors from "colors";
 import User from "../models/User";
 import jwt from "jsonwebtoken";
 import AWS from "aws-sdk";
+import { nanoid } from "nanoid";
 import { comparePassword, hashPassword } from "../utils/auth.util";
 import { errorHandler, genericError } from "../utils/error.utils";
 
@@ -104,37 +105,52 @@ export const currentUser = async (req, res) => {
   }
 };
 
-export const sendTestEmail = async (req, res) => {
-  // console.log("SES email sent");
-  // res.json({ ok: true });
-  const params = {
-    Source: process.env.EMAIL_FROM,
-    Destination: { ToAddresses: ["dashdeepak30@gmail.com"] },
-    ReplyToAddresses: [process.env.EMAIL_FROM],
-    Message: {
-      Body: {
-        Html: {
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const shortCode = nanoid(6).toUpperCase();
+    const user = await User.findOneAndUpdate(
+      { email },
+      { passwordResetCode: shortCode }
+    );
+
+    if (!user) {
+      genericError(400, "User with that email doesn't exist");
+    }
+
+    // send email
+    const params = {
+      Source: process.env.EMAIL_FROM,
+      Destination: { ToAddresses: ["dashdeepak30@gmail.com"] },
+      // ReplyToAddresses: [process.env.EMAIL_FROM],
+      Message: {
+        Body: {
+          Html: {
+            Charset: "UTF-8",
+            Data: `
+            <html>
+              <h1>Reset password link</h1>
+              <p>Please use the following code to reset your password</p>
+              <h2 style="color: red">${shortCode}</h2>
+            </html>
+            `,
+          },
+        },
+        Subject: {
           Charset: "UTF-8",
-          Data: `
-          <html>
-            <h1>Reset password link</h1>
-            <p>Please use the following link to reset your password</p>
-          </html>
-          `,
+          Data: "Dlearn Password reset link",
         },
       },
-      Subject: {
-        Charset: "UTF-8",
-        Data: "Dlearn Password reset link",
-      },
-    },
-  };
+    };
 
-  const emailSent = SES.sendEmail(params).promise();
-  emailSent
-    .then((data) => {
-      console.log(data);
-      res.json({ ok: true });
-    })
-    .catch((err) => console.log(`${err}`.red.underline));
+    const emailSent = SES.sendEmail(params).promise();
+    emailSent
+      .then((data) => {
+        console.log(data);
+        res.json({ ok: true });
+      })
+      .catch((err) => console.log(`${err}`.red.underline));
+  } catch (err) {
+    errorHandler(err, "Unable to fetch current user details");
+  }
 };
