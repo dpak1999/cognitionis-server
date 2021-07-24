@@ -1,7 +1,8 @@
 /** @format */
-import stripe from "stripe";
 import queryString from "query-string";
 import User from "../models/User";
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
 export const makeInstructor = async (req, res) => {
   try {
@@ -9,14 +10,24 @@ export const makeInstructor = async (req, res) => {
 
     if (!user.stripe_account_id) {
       const account = await stripe.accounts.create({
-        type: "express",
+        type: "custom",
+        country: "US",
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
       });
+
+      // const account = await stripe.accounts.create({
+      //   type: "express",
+      // });
+
       console.log("Stripe account ", account.id);
       user.stripe_account_id = account.id;
       user.save();
     }
 
-    const accountLink = await stripe.accountLinks.create({
+    let accountLink = await stripe.accountLinks.create({
       account: user.stripe_account_id,
       refresh_url: process.env.STRIPE_REDIRECT_URL,
       return_url: process.env.STRIPE_REDIRECT_URL,
