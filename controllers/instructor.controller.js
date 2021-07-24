@@ -22,7 +22,6 @@ export const makeInstructor = async (req, res) => {
       //   type: "express",
       // });
 
-      console.log("Stripe account ", account.id);
       user.stripe_account_id = account.id;
       user.save();
     }
@@ -34,8 +33,6 @@ export const makeInstructor = async (req, res) => {
       type: "account_onboarding",
     });
 
-    console.log(accountLink);
-
     accountLink = Object.assign(accountLink, {
       "stripe_user[email]": user.email,
     });
@@ -43,5 +40,30 @@ export const makeInstructor = async (req, res) => {
     res.send(`${accountLink.url}?${queryString.stringify(accountLink)}`);
   } catch (error) {
     console.log("Make instructor error", error);
+  }
+};
+
+export const getAccountStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).exec();
+    const account = await stripe.accounts.retrieve(user.stripe_account_id);
+
+    if (!account.charges_enabled) {
+      return res.status(401).send("Uh! Oh you are not authorized");
+    } else {
+      const statusUpdated = await User.findByIdAndUpdate(
+        user._id,
+        {
+          stripe_seller: account,
+          $addToSet: { role: "Instructor" },
+        },
+        { new: true }
+      )
+        .select("-password -passwordResetCode")
+        .exec();
+      res.json(statusUpdated);
+    }
+  } catch (error) {
+    console.log(error);
   }
 };
