@@ -67,3 +67,18 @@ export const getAccountStatus = async (req, res) => {
     console.log(error);
   }
 };
+
+export const currentInstructor = async (req, res) => {
+  try {
+    let user = await User.findById(req.user._id)
+      .select("-password -passwordResetCode")
+      .exec();
+    if (!user.role.includes("Instructor")) {
+      return res.status(403);
+    } else {
+      res.json({ ok: true });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
