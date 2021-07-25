@@ -136,7 +136,7 @@ export const forgotPassword = async (req, res) => {
         },
         Subject: {
           Charset: "UTF-8",
-          Data: "Dlearn Password reset link",
+          Data: "Cognitionis Password reset link",
         },
       },
     };
