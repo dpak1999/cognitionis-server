@@ -1,6 +1,8 @@
 /** @format */
 import AWS from "aws-sdk";
 import { nanoid } from "nanoid";
+import slugify from "slugify";
+import Course from "../models/Course";
 
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -67,5 +69,27 @@ export const removeImage = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+  }
+};
+
+export const create = async (req, res) => {
+  try {
+    const existingCourse = await Course.findOne({
+      slug: slugify(req.body.name.toLowerCase()),
+    });
+
+    if (existingCourse)
+      return res.status(400).send("There is already a course with this title");
+
+    const course = await new Course({
+      slug: slugify(req.body.name),
+      instructor: req.user._id,
+      ...req.body,
+    }).save();
+
+    res.json(course);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send("Unable to create course. Please try again");
   }
 };
