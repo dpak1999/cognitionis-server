@@ -5,6 +5,7 @@ import {
   uploadImage,
   removeImage,
   create,
+  getSingleCourse,
 } from "../controllers/course.controller";
 import { isInstructor, requireSignin } from "../middlewares";
 
@@ -16,5 +17,6 @@ router.post("/course/remove-image", removeImage);
 
 // course
 router.post("/course", requireSignin, isInstructor, create);
+router.get("/course/:slug", requireSignin, isInstructor, getSingleCourse);
 
 module.exports = router;

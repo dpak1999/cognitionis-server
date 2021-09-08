@@ -93,3 +93,17 @@ export const create = async (req, res) => {
     return res.status(400).send("Unable to create course. Please try again");
   }
 };
+
+export const getSingleCourse = async (req, res) => {
+  try {
+    const getSingleCourse = await Course.findOne({
+      slug: req.params.slug,
+    })
+      .populate("instructor", "_id name")
+      .exec();
+    res.json(getSingleCourse);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send("Unable to create course. Please try again");
+  }
+};
