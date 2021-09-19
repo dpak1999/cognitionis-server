@@ -1,6 +1,6 @@
 /** @format */
 
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 const { ObjectId } = mongoose.Schema;
 
 const lessonSchema = new mongoose.Schema(
@@ -21,7 +21,7 @@ const lessonSchema = new mongoose.Schema(
       type: {},
       minLength: 200,
     },
-    video_link: {},
+    video: {},
     free_preview: {
       type: Boolean,
       default: false,
@@ -65,7 +65,7 @@ const courseScehma = new mongoose.Schema(
     },
     instructor: {
       type: ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     lessons: [lessonSchema],
@@ -73,4 +73,4 @@ const courseScehma = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("Course", courseScehma);
+export default mongoose.model('Course', courseScehma);
