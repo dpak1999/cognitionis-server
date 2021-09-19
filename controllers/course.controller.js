@@ -1,8 +1,9 @@
 /** @format */
-import AWS from "aws-sdk";
-import { nanoid } from "nanoid";
-import slugify from "slugify";
-import Course from "../models/Course";
+import AWS from 'aws-sdk';
+import { nanoid } from 'nanoid';
+import slugify from 'slugify';
+import { readFileSync } from 'fs';
+import Course from '../models/Course';
 
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -17,23 +18,23 @@ export const uploadImage = async (req, res) => {
   try {
     const { image } = req.body;
 
-    if (!image) return res.status(400).send("No image found");
+    if (!image) return res.status(400).send('No image found');
 
     // remove noisy text
     const base64Data = new Buffer.from(
-      image.replace(/^data:image\/\w+;base64,/, ""),
-      "base64"
+      image.replace(/^data:image\/\w+;base64,/, ''),
+      'base64'
     );
 
-    const type = image.split(";")[0].split("/")[1];
+    const type = image.split(';')[0].split('/')[1];
 
     // image params
     const params = {
-      Bucket: "cognitionis-bucket",
+      Bucket: 'cognitionis-bucket',
       Key: `${nanoid()}.${type}`,
       Body: base64Data,
-      ACL: "public-read",
-      ContentEncoding: "base64",
+      ACL: 'public-read',
+      ContentEncoding: 'base64',
       ContentType: `image/${type}`,
     };
 
@@ -79,7 +80,7 @@ export const create = async (req, res) => {
     });
 
     if (existingCourse)
-      return res.status(400).send("There is already a course with this title");
+      return res.status(400).send('There is already a course with this title');
 
     const course = await new Course({
       slug: slugify(req.body.name),
@@ -90,7 +91,7 @@ export const create = async (req, res) => {
     res.json(course);
   } catch (error) {
     console.log(error);
-    return res.status(400).send("Unable to create course. Please try again");
+    return res.status(400).send('Unable to create course. Please try again');
   }
 };
 
@@ -99,11 +100,40 @@ export const getSingleCourse = async (req, res) => {
     const getSingleCourse = await Course.findOne({
       slug: req.params.slug,
     })
-      .populate("instructor", "_id name")
+      .populate('instructor', '_id name')
       .exec();
     res.json(getSingleCourse);
   } catch (error) {
     console.log(error);
-    return res.status(400).send("Unable to create course. Please try again");
+    return res.status(400).send('Unable to create course. Please try again');
+  }
+};
+
+export const uploadVideo = async (req, res) => {
+  try {
+    const { video } = req.files;
+
+    if (!video) return res.status(400).send('No video found');
+
+    // video params
+    const params = {
+      Bucket: 'cognitionis-bucket',
+      Key: `${nanoid()}.${video.type.split('/')[1]}`,
+      Body: readFileSync(video.path),
+      ACL: 'public-read',
+      ContentType: video.type,
+    };
+
+    // upload to s3
+    S3.upload(params, (err, data) => {
+      if (err) {
+        console.log(err);
+        res.sendStatus(400);
+      }
+
+      res.send(data);
+    });
+  } catch (error) {
+    console.log(error);
   }
 };
