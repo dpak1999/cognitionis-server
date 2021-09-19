@@ -8,6 +8,7 @@ import {
   create,
   getSingleCourse,
   uploadVideo,
+  removeVideo,
 } from '../controllers/course.controller';
 import { isInstructor, requireSignin } from '../middlewares';
 
@@ -21,5 +22,6 @@ router.post('/course/remove-image', removeImage);
 router.post('/course', requireSignin, isInstructor, create);
 router.get('/course/:slug', requireSignin, isInstructor, getSingleCourse);
 router.post('/course/video-upload', requireSignin, formidable(), uploadVideo);
+router.post('/course/remove-video', requireSignin, removeVideo);
 
 module.exports = router;
