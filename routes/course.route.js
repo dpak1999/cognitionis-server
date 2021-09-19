@@ -21,7 +21,12 @@ router.post('/course/remove-image', removeImage);
 // course
 router.post('/course', requireSignin, isInstructor, create);
 router.get('/course/:slug', requireSignin, isInstructor, getSingleCourse);
-router.post('/course/video-upload', requireSignin, formidable(), uploadVideo);
-router.post('/course/remove-video', requireSignin, removeVideo);
+router.post(
+  '/course/video-upload/:instructorId',
+  requireSignin,
+  formidable(),
+  uploadVideo
+);
+router.post('/course/remove-video/:instructorId', requireSignin, removeVideo);
 
 module.exports = router;
