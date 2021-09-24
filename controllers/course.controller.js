@@ -195,3 +195,24 @@ export const addLesson = async (req, res) => {
     return res.status(400).send('Unable to create lesson. Please try again');
   }
 };
+
+export const update = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const course = await Course.findOne({ slug }).exec();
+
+    if (req.user._id != course.instructor) {
+      return res.status(400).send('Unauthorized');
+    }
+
+    const updated = await Course.findOneAndUpdate({ slug }, req.body, {
+      new: true,
+    }).exec();
+
+    res.json();
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to upodate course. Please try again');
+  }
+};

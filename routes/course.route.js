@@ -10,6 +10,7 @@ import {
   uploadVideo,
   removeVideo,
   addLesson,
+  update,
 } from '../controllers/course.controller';
 import { isInstructor, requireSignin } from '../middlewares';
 
@@ -21,6 +22,7 @@ router.post('/course/remove-image', removeImage);
 
 // course
 router.post('/course', requireSignin, isInstructor, create);
+router.put('/course/:slug', requireSignin, update);
 router.get('/course/:slug', requireSignin, isInstructor, getSingleCourse);
 router.post(
   '/course/video-upload/:instructorId',
