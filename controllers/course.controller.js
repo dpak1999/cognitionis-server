@@ -238,3 +238,33 @@ export const removeLesson = async (req, res) => {
     return res.status(400).send('Unable to upodate course. Please try again');
   }
 };
+
+export const updateLesson = async (req, res) => {
+  try {
+    const { slug, lessonId } = req.params;
+    const { _id, title, content, video, free_preview } = req.body;
+    const course = await Course.findOne({ slug }).select('instructor').exec();
+
+    if (req.user._id != course.instructor._id) {
+      return res.status(400).send('Unauthorized');
+    }
+
+    const updated = await Course.updateOne(
+      { 'lessons._id': _id },
+      {
+        $set: {
+          'lessons.$.title': title,
+          'lessons.$.content': content,
+          'lessons.$.video': video,
+          'lessons.$.free_preview': free_preview,
+        },
+      },
+      { new: true }
+    ).exec();
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to upodate lesson. Please try again');
+  }
+};
