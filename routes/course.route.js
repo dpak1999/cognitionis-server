@@ -13,6 +13,8 @@ import {
   update,
   removeLesson,
   updateLesson,
+  publishCourse,
+  unpublishCourse,
 } from '../controllers/course.controller';
 import { isInstructor, requireSignin } from '../middlewares';
 
@@ -32,6 +34,9 @@ router.post(
   formidable(),
   uploadVideo
 );
+router.put('/course/publish/:courseId', requireSignin, publishCourse);
+router.put('/course/unpublish/:courseId', requireSignin, unpublishCourse);
+
 router.post('/course/remove-video/:instructorId', requireSignin, removeVideo);
 router.post('/course/lesson/:slug/:instructorId', requireSignin, addLesson);
 router.put('/course/lesson/:slug/:instructorId', requireSignin, updateLesson);
