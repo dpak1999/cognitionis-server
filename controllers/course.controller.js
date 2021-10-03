@@ -315,3 +315,16 @@ export const unpublishCourse = async (req, res) => {
     return res.status(400).send('Unable to unpublish course. Please try again');
   }
 };
+
+export const allCourses = async (req, res) => {
+  try {
+    const allCourses = await Course.find({ published: true })
+      .populate('instructor', '_id name')
+      .exec();
+
+    res.json(allCourses);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to unpublish course. Please try again');
+  }
+};

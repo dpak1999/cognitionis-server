@@ -15,11 +15,13 @@ import {
   updateLesson,
   publishCourse,
   unpublishCourse,
+  allCourses,
 } from '../controllers/course.controller';
 import { isInstructor, requireSignin } from '../middlewares';
 
 const router = express.Router();
 
+router.get('/courses', allCourses);
 // image
 router.post('/course/upload-image', uploadImage);
 router.post('/course/remove-image', removeImage);
