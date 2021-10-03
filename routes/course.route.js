@@ -29,7 +29,7 @@ router.post('/course/remove-image', removeImage);
 // course
 router.post('/course', requireSignin, isInstructor, create);
 router.put('/course/:slug', requireSignin, update);
-router.get('/course/:slug', requireSignin, isInstructor, getSingleCourse);
+router.get('/course/:slug', getSingleCourse);
 router.post(
   '/course/video-upload/:instructorId',
   requireSignin,
