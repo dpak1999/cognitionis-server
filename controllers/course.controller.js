@@ -348,6 +348,30 @@ export const checkEnrollment = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+    return res.status(400).send('Unable to check enrollment. Please try again');
+  }
+};
+
+export const freeEnrollment = async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.courseId).exec();
+    if (course.paid) return;
+
+    const result = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $addToSet: { courses: course._id },
+      },
+      { new: true }
+    ).exec();
+
+    res.json({
+      course,
+      message:
+        'Congratulations !! You have successfully enrolled for this course',
+    });
+  } catch (error) {
+    console.log(error);
     return res.status(400).send('Unable to enroll. Please try again');
   }
 };
