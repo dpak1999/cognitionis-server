@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import slugify from 'slugify';
 import { readFileSync } from 'fs';
 import Course from '../models/Course';
+import User from '../models/User';
 
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -326,5 +327,27 @@ export const allCourses = async (req, res) => {
   } catch (error) {
     console.log(error);
     return res.status(400).send('Unable to unpublish course. Please try again');
+  }
+};
+
+export const checkEnrollment = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    const user = await User.findById(req.user._id).exec();
+
+    let ids = [];
+    let length = user.courses && user.courses.length;
+    for (let i = 0; i < length; i++) {
+      ids.push(user.courses[i].toString());
+    }
+
+    res.json({
+      status: ids.includes(courseId),
+      course: await Course.findById(courseId).exec(),
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to enroll. Please try again');
   }
 };
