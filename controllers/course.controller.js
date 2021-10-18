@@ -4,6 +4,9 @@ import { nanoid } from 'nanoid';
 import slugify from 'slugify';
 import { readFileSync } from 'fs';
 import Course from '../models/Course';
+import User from '../models/User';
+
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 const awsConfig = {
   accessKeyId: process.env.AWS_ACCESS_KEY,
@@ -193,5 +196,263 @@ export const addLesson = async (req, res) => {
   } catch (error) {
     console.log(error);
     return res.status(400).send('Unable to create lesson. Please try again');
+  }
+};
+
+export const update = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const course = await Course.findOne({ slug }).exec();
+
+    if (req.user._id != course.instructor) {
+      return res.status(400).send('Unauthorized');
+    }
+
+    const updated = await Course.findOneAndUpdate({ slug }, req.body, {
+      new: true,
+    }).exec();
+
+    res.json();
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to upodate course. Please try again');
+  }
+};
+
+export const removeLesson = async (req, res) => {
+  try {
+    const { slug, lessonId } = req.params;
+    const course = await Course.findOne({ slug }).exec();
+
+    if (req.user._id != course.instructor) {
+      return res.status(400).send('Unauthorized');
+    }
+
+    await Course.findByIdAndUpdate(course._id, {
+      $pull: {
+        lessons: { _id: lessonId },
+      },
+    }).exec();
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to upodate course. Please try again');
+  }
+};
+
+export const updateLesson = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const { _id, title, content, video, free_preview } = req.body;
+    const course = await Course.findOne({ slug }).select('instructor').exec();
+
+    if (req.user._id != course.instructor._id) {
+      return res.status(400).send('Unauthorized');
+    }
+
+    const updated = await Course.updateOne(
+      { 'lessons._id': _id },
+      {
+        $set: {
+          'lessons.$.title': title,
+          'lessons.$.content': content,
+          'lessons.$.video': video,
+          'lessons.$.free_preview': free_preview,
+        },
+      },
+      { new: true }
+    ).exec();
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to update lesson. Please try again');
+  }
+};
+
+export const publishCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const course = await Course.findById(courseId).select('instructor').exec();
+
+    if (req.user._id != course.instructor._id) {
+      return res.status(400).send('Unauthorized');
+    }
+
+    const updated = await Course.findByIdAndUpdate(
+      courseId,
+      {
+        published: true,
+      },
+      { new: true }
+    ).exec();
+
+    res.json(updated);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to publish course. Please try again');
+  }
+};
+
+export const unpublishCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const course = await Course.findById(courseId).select('instructor').exec();
+
+    if (req.user._id != course.instructor._id) {
+      return res.status(400).send('Unauthorized');
+    }
+
+    const updated = await Course.findByIdAndUpdate(
+      courseId,
+      {
+        published: false,
+      },
+      { new: true }
+    ).exec();
+    res.json(updated);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to unpublish course. Please try again');
+  }
+};
+
+export const allCourses = async (req, res) => {
+  try {
+    const allCourses = await Course.find({ published: true })
+      .populate('instructor', '_id name')
+      .exec();
+
+    res.json(allCourses);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to unpublish course. Please try again');
+  }
+};
+
+export const checkEnrollment = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    const user = await User.findById(req.user._id).exec();
+
+    let ids = [];
+    let length = user.courses && user.courses.length;
+    for (let i = 0; i < length; i++) {
+      ids.push(user.courses[i].toString());
+    }
+
+    res.json({
+      status: ids.includes(courseId),
+      course: await Course.findById(courseId).exec(),
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to check enrollment. Please try again');
+  }
+};
+
+export const freeEnrollment = async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.courseId).exec();
+    if (course.paid) return;
+
+    await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $addToSet: { courses: course._id },
+      },
+      { new: true }
+    ).exec();
+
+    res.json({
+      course,
+      message:
+        'Congratulations !! You have successfully enrolled for this course',
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to enroll. Please try again');
+  }
+};
+
+export const paidEnrollment = async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.courseId)
+      .populate('instructor')
+      .exec();
+    if (!course.paid) return;
+
+    const fee = (course.price * 25) / 100;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          name: course.name,
+          amount: Math.round(course.price.toFixed(2) * 100),
+          currency: 'inr',
+          quantity: 1,
+        },
+      ],
+      payment_intent_data: {
+        // application_fee_amount: Math.round(fee.toFixed(2) * 100),
+        transfer_data: {
+          destination: course.instructor.stripe_account_id,
+        },
+      },
+      success_url: `${process.env.STRIPE_SUCCESS_URL}/${course._id}`,
+      cancel_url: process.env.STRIPE_CANCEL_URL,
+    });
+
+    await User.findByIdAndUpdate(req.user._id, {
+      stripeSession: session,
+    }).exec();
+
+    res.send(session.id);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to enroll. Please try again');
+  }
+};
+
+export const stripeSuccess = async (req, res) => {
+  try {
+    const course = await Course.findById(req.params.courseId).exec();
+    const user = await User.findById(req.user._id).exec();
+
+    if (!user.stripeSession.id) return res.sendStatus(400);
+
+    const session = await stripe.checkout.sessions.retrieve(
+      user.stripeSession.id
+    );
+
+    if (session.payment_status === 'paid') {
+      await User.findByIdAndUpdate(user._id, {
+        $addToSet: { courses: course._id },
+        $set: { stripeSession: {} },
+      }).exec();
+    }
+
+    res.json({ success: true, course });
+  } catch (error) {
+    console.log(error);
+    return res.json({ success: false });
+  }
+};
+
+export const userCourses = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).exec();
+    const courses = await Course.find({ _id: { $in: user.courses } })
+      .populate('instructor', '_id name')
+      .exec();
+
+    res.json(courses);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to fetch courses. Please try again');
   }
 };

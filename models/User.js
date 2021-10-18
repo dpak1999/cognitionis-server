@@ -1,9 +1,9 @@
 /** @format */
 
-import mongoose from "mongoose";
-const { Schema } = mongoose;
+import mongoose from 'mongoose';
+const { ObjectId } = mongoose.Schema;
 
-const userSchema = new Schema(
+const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -23,22 +23,23 @@ const userSchema = new Schema(
     },
     picture: {
       type: String,
-      default: "/avatar.png",
+      default: '/avatar.png',
     },
     role: {
       type: [String],
-      default: ["Subscriber"],
-      enum: ["Subscriber", "Instructor", "Admin"],
+      default: ['Subscriber'],
+      enum: ['Subscriber', 'Instructor', 'Admin'],
     },
-    stripe_accout_id: "",
+    stripe_accout_id: '',
     stripe_seller: {},
     stripeSession: {},
     passwordResetCode: {
       data: String,
-      default: "",
+      default: '',
     },
+    courses: [{ type: ObjectId, ref: 'Course' }],
   },
   { timestamps: true }
 );
 
-export default mongoose.model("User", userSchema);
+export default mongoose.model('User', userSchema);
