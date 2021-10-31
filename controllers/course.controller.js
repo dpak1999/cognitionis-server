@@ -493,3 +493,17 @@ export const markCompleted = async (req, res) => {
     return res.status(400).send('Unable to fetch courses. Please try again');
   }
 };
+
+export const completedList = async (req, res) => {
+  try {
+    const list = await Completed.findOne({
+      user: req.user._id,
+      course: req.body.courseId,
+    }).exec();
+
+    list && res.json(list.lessons);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to fetch courses. Please try again');
+  }
+};
