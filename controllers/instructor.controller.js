@@ -1,9 +1,9 @@
 /** @format */
-import queryString from "query-string";
-import Course from "../models/Course";
-import User from "../models/User";
+import queryString from 'query-string';
+import Course from '../models/Course';
+import User from '../models/User';
 
-const stripe = require("stripe")(process.env.STRIPE_SECRET);
+const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
 export const makeInstructor = async (req, res) => {
   try {
@@ -11,8 +11,8 @@ export const makeInstructor = async (req, res) => {
 
     if (!user.stripe_account_id) {
       const account = await stripe.accounts.create({
-        type: "custom",
-        country: "US",
+        type: 'custom',
+        country: 'US',
         capabilities: {
           card_payments: { requested: true },
           transfers: { requested: true },
@@ -31,16 +31,16 @@ export const makeInstructor = async (req, res) => {
       account: user.stripe_account_id,
       refresh_url: process.env.STRIPE_REDIRECT_URL,
       return_url: process.env.STRIPE_REDIRECT_URL,
-      type: "account_onboarding",
+      type: 'account_onboarding',
     });
 
     accountLink = Object.assign(accountLink, {
-      "stripe_user[email]": user.email,
+      'stripe_user[email]': user.email,
     });
 
     res.send(`${accountLink.url}?${queryString.stringify(accountLink)}`);
   } catch (error) {
-    console.log("Make instructor error", error);
+    console.log('Make instructor error', error);
   }
 };
 
@@ -50,17 +50,17 @@ export const getAccountStatus = async (req, res) => {
     const account = await stripe.accounts.retrieve(user.stripe_account_id);
 
     if (!account.charges_enabled) {
-      return res.status(401).send("Uh! Oh you are not authorized");
+      return res.status(401).send('Uh! Oh you are not authorized');
     } else {
       const statusUpdated = await User.findByIdAndUpdate(
         user._id,
         {
           stripe_seller: account,
-          $addToSet: { role: "Instructor" },
+          $addToSet: { role: 'Instructor' },
         },
         { new: true }
       )
-        .select("-password -passwordResetCode")
+        .select('-password -passwordResetCode')
         .exec();
       res.json(statusUpdated);
     }
@@ -72,9 +72,9 @@ export const getAccountStatus = async (req, res) => {
 export const currentInstructor = async (req, res) => {
   try {
     let user = await User.findById(req.user._id)
-      .select("-password -passwordResetCode")
+      .select('-password -passwordResetCode')
       .exec();
-    if (!user.role.includes("Instructor")) {
+    if (!user.role.includes('Instructor')) {
       return res.sendStatus(403);
     } else {
       res.json({ ok: true });
@@ -92,6 +92,39 @@ export const instructorCourse = async (req, res) => {
       })
       .exec();
     res.json(courses);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const studentCount = async (req, res) => {
+  try {
+    const users = await User.find({ courses: req.body.courseId })
+      .select('_id')
+      .exec();
+    res.json(users);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const instructorBalance = async (req, res) => {
+  try {
+    let user = await User.findById(req.user._id).exec();
+    const balance = await stripe.balance.retrieve({
+      stripeAccount: user.stripe_account_id,
+    });
+    res.json(balance);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const instructorPayoutSettings = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).exec();
+    const link = await stripe.accounts.createLoginLink(user.stripe_seller.id);
+    return res.json(link);
   } catch (error) {
     console.log(error);
   }
