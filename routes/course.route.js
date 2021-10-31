@@ -23,6 +23,7 @@ import {
   userCourses,
   markCompleted,
   completedList,
+  markIncomplete,
 } from '../controllers/course.controller';
 import { isEnrolled, isInstructor, requireSignin } from '../middlewares';
 
@@ -60,6 +61,7 @@ router.get('/user-courses', requireSignin, userCourses);
 router.get('/user/course/:slug', requireSignin, isEnrolled, getSingleCourse);
 
 router.post('/mark-completed', requireSignin, markCompleted);
+router.post('/mark-incomplete', requireSignin, markIncomplete);
 router.post('/completed-list', requireSignin, completedList);
 
 module.exports = router;

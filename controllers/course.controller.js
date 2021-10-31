@@ -468,7 +468,7 @@ export const markCompleted = async (req, res) => {
     }).exec();
 
     if (existing) {
-      const updated = await Completed.findOneAndUpdate(
+      await Completed.findOneAndUpdate(
         {
           user: req.user._id,
           course: courseId,
@@ -481,7 +481,7 @@ export const markCompleted = async (req, res) => {
       ).exec();
       res.json({ ok: true });
     } else {
-      const created = await new Completed({
+      await new Completed({
         user: req.user._id,
         course: courseId,
         lessons: lessonId,
@@ -502,6 +502,28 @@ export const completedList = async (req, res) => {
     }).exec();
 
     list && res.json(list.lessons);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to fetch courses. Please try again');
+  }
+};
+
+export const markIncomplete = async (req, res) => {
+  try {
+    const { courseId, lessonId } = req.body;
+
+    await Completed.findOneAndUpdate(
+      {
+        user: req.user._id,
+        course: courseId,
+      },
+      {
+        $pull: {
+          lessons: lessonId,
+        },
+      }
+    ).exec();
+    return res.json({ ok: true });
   } catch (error) {
     console.log(error);
     return res.status(400).send('Unable to fetch courses. Please try again');
