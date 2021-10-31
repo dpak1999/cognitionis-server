@@ -5,6 +5,7 @@ import slugify from 'slugify';
 import { readFileSync } from 'fs';
 import Course from '../models/Course';
 import User from '../models/User';
+import Completed from '../models/Completed';
 
 const stripe = require('stripe')(process.env.STRIPE_SECRET);
 
@@ -451,6 +452,42 @@ export const userCourses = async (req, res) => {
       .exec();
 
     res.json(courses);
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send('Unable to fetch courses. Please try again');
+  }
+};
+
+export const markCompleted = async (req, res) => {
+  try {
+    const { courseId, lessonId } = req.body;
+
+    const existing = await Completed.findOne({
+      user: req.user._id,
+      course: courseId,
+    }).exec();
+
+    if (existing) {
+      const updated = await Completed.findOneAndUpdate(
+        {
+          user: req.user._id,
+          course: courseId,
+        },
+        {
+          $addToSet: {
+            lessons: lessonId,
+          },
+        }
+      ).exec();
+      res.json({ ok: true });
+    } else {
+      const created = await new Completed({
+        user: req.user._id,
+        course: courseId,
+        lessons: lessonId,
+      }).save();
+      return res.json({ ok: true });
+    }
   } catch (error) {
     console.log(error);
     return res.status(400).send('Unable to fetch courses. Please try again');
